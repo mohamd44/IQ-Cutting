@@ -233,36 +233,163 @@ function renderPieceTable(){
 }
 
 /* ---------------- إدخال صورة مرجعية ---------------- */
+let _importBound=false;
 function renderImageInput(){
-  let wrap=document.getElementById('imageInputWrap');
-  if(!wrap){
-    wrap=document.createElement('div');
-    wrap.id='imageInputWrap';
-    wrap.style.cssText='margin-top:8px';
-    const piecesCard=document.querySelector('.pieces-head')?.closest('.card');
-    if(piecesCard) piecesCard.appendChild(wrap);
-  }
-  if(!wrap) return;
-  wrap.innerHTML=`<label style="font-size:11px;color:#64748b;display:block;margin-bottom:3px">صورة مرجعية للقطع (اختياري):
-    <input type="file" accept="image/*" id="pieceImageInput" style="display:block;font-size:11px;margin-top:2px">
-  </label>`;
-  if(projectImage){
-    const img=document.createElement('img');
-    img.src=projectImage; img.style.cssText='max-width:100%;max-height:160px;border-radius:6px;border:1px solid #ddd;margin-top:4px;cursor:pointer';
-    img.title='اضغط للإلغاء';
-    img.addEventListener('click',()=>{ projectImage=null; renderImageInput(); scheduleSave(); });
-    wrap.appendChild(img);
-  }
-  const inp=wrap.querySelector('#pieceImageInput');
-  if(inp) inp.addEventListener('change',e=>{
+  if(_importBound) return; _importBound=true;
+  const status=document.getElementById('importStatus');
+  function setImportStatus(msg){ if(status) status.textContent=msg; }
+
+  /* --- كاميرا / صورة (مرجع فقط) --- */
+  const cameraFile=document.getElementById('importFileCamera');
+  const imageFile=document.getElementById('importFileImage');
+  document.getElementById('btnImportCamera')?.addEventListener('click',()=>cameraFile.click());
+  document.getElementById('btnImportImage')?.addEventListener('click',()=>imageFile.click());
+  function handleImageRef(e){
     const file=e.target.files[0]; if(!file) return;
     const reader=new FileReader();
-    reader.onload=()=>{ projectImage=reader.result; renderImageInput(); scheduleSave(); };
+    reader.onload=()=>{ projectImage=reader.result; setImportStatus('✓ تم تحميل الصورة كمرجع'); scheduleSave(); };
     reader.readAsDataURL(file);
+    e.target.value='';
+  }
+  if(cameraFile) cameraFile.addEventListener('change',handleImageRef);
+  if(imageFile) imageFile.addEventListener('change',handleImageRef);
+
+  /* --- PDF --- */
+  document.getElementById('btnImportPdf')?.addEventListener('click',()=>document.getElementById('importFilePdf')?.click());
+  document.getElementById('importFilePdf')?.addEventListener('change',async function(e){
+    const file=e.target.files[0]; if(!file) return;
+    setImportStatus('جاري قراءة PDF...');
+    try{
+      if(typeof pdfjsLib==='undefined'){ setImportStatus('❌ مكتبة PDF غير متوفرة — تحقق من الاتصال بالإنترنت'); return; }
+      pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+      const arrayBuffer=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:arrayBuffer}).promise;
+      let allText='';
+      for(let i=1;i<=pdf.numPages;i++){
+        const page=await pdf.getPage(i);
+        const tc=await page.getTextContent();
+        allText+=tc.items.map(it=>it.str).join(' ')+'\n';
+      }
+      const dims=parseDimensionsFromText(allText);
+      if(dims.length){ importParsedDimensions(dims); setImportStatus('✓ تم استخراج '+dims.length+' قطعة من PDF'); }
+      else setImportStatus('⚠ لم يتم العثور على مقاسات في PDF');
+    }catch(err){ setImportStatus('❌ خطأ في قراءة PDF: '+err.message); }
+    e.target.value='';
+  });
+
+  /* --- Excel / CSV --- */
+  document.getElementById('btnImportExcel')?.addEventListener('click',()=>document.getElementById('importFileExcel')?.click());
+  document.getElementById('importFileExcel')?.addEventListener('change',function(e){
+    const file=e.target.files[0]; if(!file) return;
+    setImportStatus('جاري قراءة الملف...');
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      try{
+        if(typeof XLSX==='undefined'){ setImportStatus('❌ مكتبة Excel غير متوفرة — تحقق من الاتصال بالإنترنت'); return; }
+        const wb=XLSX.read(ev.target.result,{type:'array'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const data=XLSX.utils.sheet_to_json(ws,{header:1});
+        const dims=parseDimensionsFromRows(data);
+        if(dims.length){ importParsedDimensions(dims); setImportStatus('✓ تم استخراج '+dims.length+' قطعة من '+file.name); }
+        else setImportStatus('⚠ لم يتم العثور على مقاسات في الملف');
+      }catch(err){ setImportStatus('❌ خطأ في قراءة الملف: '+err.message); }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value='';
+  });
+
+  /* --- Google Sheets --- */
+  document.getElementById('btnImportGsheet')?.addEventListener('click',async function(){
+    const url=prompt('الصق رابط Google Sheet العام (يجب أن يكونمشاركة عامة):');
+    if(!url) return;
+    setImportStatus('جاري جلب البيانات...');
+    try{
+      let csvUrl=url;
+      const match=url.match(/\/spreadsheets\/d\/([a-zA-Z0-9_-]+)/);
+      if(match) csvUrl='https://docs.google.com/spreadsheets/d/'+match[1]+'/export?format=csv';
+      const resp=await fetch(csvUrl);
+      if(!resp.ok) throw new Error('HTTP '+resp.status);
+      const text=await resp.text();
+      const lines=text.split('\n').map(l=>l.split(',').map(c=>c.trim().replace(/^"|"$/g,'')));
+      const dims=parseDimensionsFromRows(lines);
+      if(dims.length){ importParsedDimensions(dims); setImportStatus('✓ تم استخراج '+dims.length+' قطعة من Google Sheets'); }
+      else setImportStatus('⚠ لم يتم العثور على مقاسات في الجدول');
+    }catch(err){ setImportStatus('❌ خطأ في جلب البيانات: '+err.message); }
   });
 }
 
-/* ---------------- خوارزمية Guillotine ---------------- */
+/* --- استخراج المقاسات من نص (PDF) --- */
+function parseDimensionsFromText(text){
+  const dims=[];
+  const re=/(\d+\.?\d*)\s*[x×*]\s*(\d+\.?\d*)/gi;
+  let m;
+  while((m=re.exec(text))!==null){
+    const l=parseFloat(m[1]), w=parseFloat(m[2]);
+    if(l>0&&w>0) dims.push({name:'',l:l,w:w,qty:1});
+  }
+  if(!dims.length){
+    const lines=text.split(/\n/);
+    const numRe=/^\s*(\d+\.?\d*)\s+(\d+\.?\d*)\s*(?:[x×*]\s*(\d+\.?\d*))?\s*$/;
+    lines.forEach(line=>{
+      const m2=line.match(numRe);
+      if(m2){
+        const l=parseFloat(m2[1]), w=parseFloat(m2[2]), q=m2[3]?parseInt(m2[3]):1;
+        if(l>0&&w>0&&q>0) dims.push({name:'',l:l,w:w,qty:q});
+      }
+    });
+  }
+  return dims;
+}
+
+/* --- استخراج المقاسات من صفوف جدول (Excel/CSV) --- */
+function parseDimensionsFromRows(rows){
+  const dims=[];
+  if(!rows||!rows.length) return dims;
+  let startIdx=0;
+  const header=rows[0];
+  if(header&&header.some&&header.some(c=>typeof c==='string'&&/طول|عرض|عدد|كمية|length|width|qty|quantity/i.test(c))){
+    startIdx=1;
+  }
+  for(let i=startIdx;i<rows.length;i++){
+    const row=rows[i];
+    if(!row||!row.length) continue;
+    const nums=[];
+    let nameVal='';
+    for(let j=0;j<row.length;j++){
+      const v=typeof row[j]==='string'?row[j].trim():row[j];
+      if(v===''||v==null) continue;
+      const n=parseFloat(v);
+      if(!isNaN(n)&&n>0) nums.push(n);
+      else if(typeof v==='string'&&v.length&&!/^[x×*]+$/.test(v)) nameVal=v;
+    }
+    if(nums.length>=2){
+      const l=nums[0], w=nums[1], q=nums.length>=3?Math.floor(nums[2]):1;
+      if(q>0) dims.push({name:nameVal,l:l,w:w,qty:q});
+    }
+  }
+  return dims;
+}
+
+/* --- إدراج المقاسات المستخرجة في جدول القطع --- */
+function importParsedDimensions(dims){
+  dims.forEach(d=>{
+    let target=null;
+    for(const p of pieces){
+      if(p.l==null&&p.w==null){ target=p; break; }
+    }
+    if(!target){
+      target=emptyPiece();
+      pieces.push(target);
+    }
+    target.name=d.name;
+    target.l=d.l;
+    target.w=d.w;
+    target.qty=d.qty;
+    if(sheetTypes.length&&!target.sheetTypeId) target.sheetTypeId=sheetTypes[0].id;
+    if(bandTypes.length&&!target.bandId) target.bandId=bandTypes[0].id;
+  });
+  renderPieceTable();
+}
 function optimize(){
   const kerf=+$('#kerf').value||0, cutDir=$('#cutDir').value;
   const cutFee=+$('#cutFee').value||0, planName=$('#planName').value.trim();

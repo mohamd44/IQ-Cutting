@@ -16,6 +16,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
   <noscript>يجب تفعيل JavaScript لتشغيل هذا التطبيق.</noscript>
@@ -168,16 +170,22 @@
           <button class="btn btn-sm" id="addBand">+ إضافة نوع</button>
         </section>
 
-        <!-- صورة مرجعية -->
+        <!-- استيراد المقاسات -->
         <section class="card">
-          <h2>📷 صورة مرجعية (اختياري)</h2>
-          <p class="hint">التقط صورة للورقة بها المقاسات كمرجع أثناء الإدخال</p>
-          <input type="file" id="pieceImage" accept="image/*" capture="environment" style="display:none">
-          <button class="btn btn-sm" id="btnPieceImage">📷 اختيار صورة / التقط صورة</button>
-          <div id="pieceImagePreview" class="hidden" style="margin-top:8px">
-            <img id="pieceImageImg" style="max-width:100%;border-radius:8px;border:1px solid #ddd">
-            <button class="btn btn-sm btn-danger" id="btnRemoveImage" style="margin-top:4px">✕ إزالة الصورة</button>
+          <h2>📥 استيراد المقاسات</h2>
+          <p class="hint">اختر طريقة الإدخال: كاميرا، صورة، PDF، Excel أو Google Sheets</p>
+          <div class="import-btns" id="importBtns">
+            <button class="btn btn-sm import-btn" id="btnImportCamera">📷 كاميرا</button>
+            <button class="btn btn-sm import-btn" id="btnImportImage">🖼 صورة</button>
+            <button class="btn btn-sm import-btn" id="btnImportPdf">📄 PDF</button>
+            <button class="btn btn-sm import-btn" id="btnImportExcel">📊 Excel / CSV</button>
+            <button class="btn btn-sm import-btn" id="btnImportGsheet">📋 Google Sheets</button>
           </div>
+          <div id="importStatus" class="hint" style="margin-top:6px"></div>
+          <input type="file" id="importFileCamera" accept="image/*" capture="environment" style="display:none">
+          <input type="file" id="importFileImage" accept="image/*" style="display:none">
+          <input type="file" id="importFilePdf" accept=".pdf" style="display:none">
+          <input type="file" id="importFileExcel" accept=".csv,.xlsx,.xls,.ods" style="display:none">
         </section>
 
         <!-- القطع المطلوبة -->

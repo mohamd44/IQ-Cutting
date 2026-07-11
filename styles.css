@@ -407,3 +407,8 @@ input:focus,select:focus{outline:2px solid var(--brand);outline-offset:-1px}
 
 /* ---- Image Preview in Sidebar ---- */
 #pieceImagePreview img{max-height:200px;object-fit:contain}
+
+/* ---- Import Buttons ---- */
+.import-btns{display:flex;flex-wrap:wrap;gap:6px}
+.import-btn{flex:1 1 auto;min-width:80px;text-align:center}
+@media(max-width:400px){.import-btn{min-width:70px;font-size:10px}}
