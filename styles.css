@@ -61,6 +61,23 @@ input:focus,select:focus{outline:2px solid var(--brand);outline-offset:-1px}
 .mini-table input[type=number]{min-width:54px}
 .edge-toggles{display:flex;gap:3px}
 
+/* Sheet Cards (replaces table for sheet types) */
+.sheet-cards{display:flex;flex-direction:column;gap:8px}
+.sheet-card{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 10px;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.sheet-card-top{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.sheet-card-name{flex:1;min-width:0;padding:5px 8px;font-size:13px;font-weight:700;border:1px solid var(--line);border-radius:6px}
+.btn-del-card{flex-shrink:0;width:28px;height:28px;font-size:14px;padding:0;display:flex;align-items:center;justify-content:center}
+.sheet-card-fields{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.scf-item{display:flex;flex-direction:column;gap:2px;font-size:10px;color:var(--muted);font-weight:600}
+.scf-item input[type=number]{width:100%;padding:5px 4px;font-size:12px;text-align:center;border:1px solid var(--line);border-radius:4px}
+.scf-grain{flex-direction:row;align-items:center;gap:4px;justify-content:center}
+.scf-grain input{accent-color:var(--brand);width:16px;height:16px}
+.scf-grain span{font-size:11px}
+@media(max-width:400px){
+  .sheet-card-fields{grid-template-columns:repeat(2,1fr)}
+  .scf-grain{grid-column:1/-1}
+}
+
 /* رأس قسم القطع + الزر الموحّد للخيارات الإضافية */
 .pieces-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
 .pieces-head h2{margin:0}

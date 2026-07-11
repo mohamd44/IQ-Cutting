@@ -124,28 +124,33 @@ function renderBandTable(){
 }
 
 function renderSheetTable(){
-  const tb=$('#sheetTable tbody'); if(!tb) return; tb.innerHTML='';
+  const wrap=$('#sheetCards'); if(!wrap) return; wrap.innerHTML='';
   const val=v=>v==null?'':v;
   sheetTypes.forEach(s=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td><input value="${escapeHtml(s.name)}" data-id="${s.id}" data-f="name" style="min-width:50px"></td>
-      <td><input type="number" min="1" value="${val(s.l)}" data-id="${s.id}" data-f="l"></td>
-      <td><input type="number" min="1" value="${val(s.w)}" data-id="${s.id}" data-f="w"></td>
-      <td><input type="number" min="1" value="${val(s.qty)}" data-id="${s.id}" data-f="qty"></td>
-      <td><input type="number" min="0" step="0.01" value="${val(s.price)}" data-id="${s.id}" data-f="price"></td>
-      <td style="text-align:center"><input type="checkbox" data-grain="${s.id}" ${s.grain?'checked':''} title="عرق اللوح"></td>
-      <td><button class="btn btn-danger" data-del="${s.id}">\u2715</button></td>`;
-    tb.appendChild(tr);
+    const card=document.createElement('div');
+    card.className='sheet-card';
+    card.innerHTML=`
+      <div class="sheet-card-top">
+        <button class="btn btn-danger btn-del-card" data-del="${s.id}">\u2715</button>
+        <input value="${escapeHtml(s.name)}" data-id="${s.id}" data-f="name" placeholder="اسم الخامة" class="sheet-card-name">
+      </div>
+      <div class="sheet-card-fields">
+        <label class="scf-item"><span>الطول</span><input type="number" min="1" value="${val(s.l)}" data-id="${s.id}" data-f="l"></label>
+        <label class="scf-item"><span>العرض</span><input type="number" min="1" value="${val(s.w)}" data-id="${s.id}" data-f="w"></label>
+        <label class="scf-item"><span>العدد</span><input type="number" min="1" value="${val(s.qty)}" data-id="${s.id}" data-f="qty"></label>
+        <label class="scf-item"><span>السعر $</span><input type="number" min="0" step="0.01" value="${val(s.price)}" data-id="${s.id}" data-f="price"></label>
+        <label class="scf-item scf-grain"><input type="checkbox" data-grain="${s.id}" ${s.grain?'checked':''}><span>عرق</span></label>
+      </div>`;
+    wrap.appendChild(card);
   });
-  tb.querySelectorAll('input[data-f]').forEach(inp=>inp.addEventListener('input',e=>{
+  wrap.querySelectorAll('input[data-f]').forEach(inp=>inp.addEventListener('input',e=>{
     const s=sheetTypes.find(x=>x.id===e.target.dataset.id); const f=e.target.dataset.f;
     s[f]=['l','w','qty','price'].includes(f)?(e.target.value===''?null:parseFloat(e.target.value)):e.target.value;
   }));
-  tb.querySelectorAll('[data-grain]').forEach(cb=>cb.addEventListener('change',e=>{
+  wrap.querySelectorAll('[data-grain]').forEach(cb=>cb.addEventListener('change',e=>{
     const s=sheetTypes.find(x=>x.id===e.target.dataset.grain); if(s) s.grain=e.target.checked;
   }));
-  tb.querySelectorAll('[data-del]').forEach(btn=>btn.addEventListener('click',e=>{
+  wrap.querySelectorAll('[data-del]').forEach(btn=>btn.addEventListener('click',e=>{
     if(sheetTypes.length<=1){ toast('يجب إبقاء خامة واحدة على الأقل'); return; }
     const id=e.target.dataset.del;
     sheetTypes=sheetTypes.filter(x=>x.id!==id);
