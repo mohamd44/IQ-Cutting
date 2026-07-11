@@ -25,6 +25,8 @@ let layout = null;
 let settings = null;
 let projectImage = null;
 let uid = 100;
+let appUserProfile = null;
+function canAccess(service){ return checkAccess(service, appUserProfile); }
 const nid = () => 'x' + (++uid);
 const emptyPiece=()=>({id:nid(),name:'',l:null,w:null,qty:null,bandId:bandTypes[0]?.id,edges:{t:false,b:false,l:false,r:false},sheetTypeId:sheetTypes[0]?.id});
 
@@ -33,8 +35,6 @@ function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.remove(
   clearTimeout(t._tm); t._tm=setTimeout(()=>t.classList.add('hidden'),2600); }
 function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 function bandById(id){ return bandTypes.find(b=>b.id===id) || {name:'-',price:0}; }
-function colorForSize(l,w,map){ const k=l+'x'+w; if(!(k in map)) map[k]=palette[Object.keys(map).length%palette.length]; return map[k]; }
-function sheetTypeById(id){ return sheetTypes.find(s=>s.id===id) || sheetTypes[0]; }
 
 /* ---------------- تحميل مكتبات الـ PDF عند الحاجة فقط ---------------- */
 let _pdfLibsP=null;
@@ -72,8 +72,6 @@ function loadState(){ try{ const raw=localStorage.getItem(LS_KEY); if(!raw) retu
 
 /* ---------------- المقاسات المكررة: مفتاح المقاس وعدّ التكرارات ---------------- */
 function sizeKey(p){ const a=(p.origL!=null?p.origL:p.l), b=(p.origW!=null?p.origW:p.w); const mn=Math.min(a,b), mx=Math.max(a,b); return mn+'x'+mx; }
-function layoutSizeCounts(){ const m={};
-  (layout||[]).forEach(mg=>(mg.sheets||[]).forEach(sh=>sh.pieces.forEach(p=>{ const k=sizeKey(p); m[k]=(m[k]||0)+1; }))); return m; }
 
 /* ---------------- تجميع الألواح المتطابقة ---------------- */
 function sheetFingerprint(sh, materialId){
@@ -556,9 +554,6 @@ function totals(){
 
 /* ---------------- رسم النتائج ---------------- */
 const fmtNum=n=>Number.isInteger(n)?n:Math.round(n*10)/10;
-const SHEET_TINTS=[['#efeaf6','#e4daee'],['#f6eaee','#f0dbe3'],['#f4f1e1','#eae3c9'],
-                   ['#e7f0ea','#d8ebdf'],['#e7eef1','#d8e7ec'],['#f1ece5','#e8e0d4']];
-function sheetTint(i){ return SHEET_TINTS[i%SHEET_TINTS.length]; }
 
 function recomputeWaste(sheet, L, W){
   const cl=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -916,43 +911,7 @@ function _band(ctx,x,y,w,h){
   _roundRect(ctx,x,y,w,h,Math.min(w,h)/2); ctx.fill();
   ctx.restore();
 }
-function _chip(ctx,text,cx,cy,vertical){
-  ctx.save();
-  ctx.font='700 10px Cairo, Arial, sans-serif';
-  ctx.textAlign='center'; ctx.textBaseline='middle';
-  const tw=ctx.measureText(text).width, padX=3.5, padY=2, fh=11;
-  const bw=tw+padX*2, bh=fh+padY*2;
-  ctx.translate(cx,cy); if(vertical) ctx.rotate(-Math.PI/2);
-  ctx.fillStyle='rgba(255,255,255,.95)';
-  _roundRect(ctx,-bw/2,-bh/2,bw,bh,3); ctx.fill();
-  ctx.strokeStyle='rgba(15,34,51,.12)'; ctx.lineWidth=0.6;
-  _roundRect(ctx,-bw/2,-bh/2,bw,bh,3); ctx.stroke();
-  ctx.fillStyle='#0f2233'; ctx.fillText(text,0,0);
-  ctx.restore();
-}
-function _dimH(ctx,x1,x2,y,label){
-  ctx.save();
-  ctx.strokeStyle='#a8706f'; ctx.lineWidth=1; ctx.lineCap='butt';
-  ctx.beginPath(); ctx.moveTo(x1,y); ctx.lineTo(x2,y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x1,y-3.5); ctx.lineTo(x1,y+3.5); ctx.moveTo(x2,y-3.5); ctx.lineTo(x2,y+3.5); ctx.stroke();
-  ctx.font='800 9px Cairo, Arial, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  const tw=ctx.measureText(label).width;
-  ctx.fillStyle='#ffffff'; ctx.fillRect((x1+x2)/2-tw/2-3, y-7, tw+6, 13);
-  ctx.fillStyle='#a8706f'; ctx.fillText(label,(x1+x2)/2, y);
-  ctx.restore();
-}
-function _dimV(ctx,x,y1,y2,label){
-  ctx.save();
-  ctx.strokeStyle='#a8706f'; ctx.lineWidth=1; ctx.lineCap='butt';
-  ctx.beginPath(); ctx.moveTo(x,y1); ctx.lineTo(x,y2); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x-3.5,y1); ctx.lineTo(x+3.5,y1); ctx.moveTo(x-3.5,y2); ctx.lineTo(x+3.5,y2); ctx.stroke();
-  ctx.font='800 9px Cairo, Arial, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
-  const tw=ctx.measureText(label).width;
-  ctx.translate(x,(y1+y2)/2); ctx.rotate(-Math.PI/2);
-  ctx.fillStyle='#ffffff'; ctx.fillRect(-tw/2-3,-7,tw+6,13);
-  ctx.fillStyle='#a8706f'; ctx.fillText(label,0,0);
-  ctx.restore();
-}
+
 function drawSheetToCanvasEl(sheet, idx, s, L, W, materialName){
   const MR=26, MB=24;
   const cv=document.createElement('canvas');
@@ -1223,7 +1182,6 @@ function openPdfModal(url, fname){
   $('#pdfOpen').href=url;
   m.classList.remove('hidden');
 }
-function row(l,v){ return '<tr><td style="padding:5px 8px;border-bottom:1px solid #eee;color:#64748b">'+l+'</td><td style="padding:5px 8px;border-bottom:1px solid #eee;font-weight:700">'+v+'</td></tr>'; }
 
 function resetProject(){
   if(!confirm('بدء مشروع جديد سيحذف كل البيانات الحالية (الاسم، الخامات، القطع، الإعدادات والمخطط). هل تريد المتابعة؟')) return;
@@ -1277,8 +1235,8 @@ if(btnExtra){
 applyExtraToggleUI();
 
 $('#btnNew').addEventListener('click',resetProject);
-$('#btnOptimize').addEventListener('click',optimize);
-$('#btnPdf').addEventListener('click',openPdfOptions);
+$('#btnOptimize').addEventListener('click',function(){ if(!gateAccess('cutting')) return; optimize(); });
+$('#btnPdf').addEventListener('click',function(){ if(!gateAccess('cutting')) return; openPdfOptions(); });
 const _pc=$('#pdfOptCancel'); if(_pc) _pc.addEventListener('click',()=>$('#pdfOptModal').classList.add('hidden'));
 const _pg=$('#pdfOptGo'); if(_pg) _pg.addEventListener('click',()=>{
   const opts={ name:($('#pdfName')&&$('#pdfName').value.trim())||'',
@@ -1293,10 +1251,6 @@ $('#pdfClose').addEventListener('click',()=>{ $('#pdfModal').classList.add('hidd
 $('#pdfPrint').addEventListener('click',()=>{ const f=$('#pdfFrame'); try{ f.contentWindow.focus(); f.contentWindow.print(); }catch(e){ toast('استخدم زر التنزيل بدل الطباعة'); } });
 $('#addSheet').addEventListener('click',()=>{ sheetTypes.push({id:nid(),name:'خامة',l:null,w:null,qty:null,price:null,grain:false}); renderSheetTable(); renderPieceTable(); });
 $('#cutDir').addEventListener('change',()=>{ if(layout) optimize(); });
-
-/* ---------------- إخفاء خيار التدوير العام (الآن حسب الخامة) ---------------- */
-const arEl=$('#allowRotate');
-if(arEl){ const tg=arEl.closest('.toggles'); if(tg) tg.style.display='none'; }
 
 /* ---------------- تهيئة التطبيق ---------------- */
 const _saved=loadState();
@@ -1317,3 +1271,53 @@ if(layout&&layout.length) renderResults();
 /* ---------------- حفظ تلقائي ---------------- */
 document.addEventListener('input', scheduleSave);
 document.addEventListener('change', scheduleSave);
+
+/* ---------------- التحكم بالصلاحيات ---------------- */
+function showSubscriptionWall(serviceName){
+  const svc=SERVICES[serviceName]||{name:serviceName,icon:''};
+  const info=getAccessInfo(appUserProfile);
+  const wa=WHATSAPP_LINK||'#';
+  let html='<div class="auth-card" style="max-width:380px;margin:40px auto;padding:24px;text-align:center">';
+  html+='<div style="font-size:48px;margin-bottom:8px">'+svc.icon+'</div>';
+  html+='<h3 style="margin:0 0 8px;color:#b5803c">'+svc.name+'</h3>';
+  if(info.status==='expired'){
+    html+='<p style="color:#dc2626;font-weight:700;margin-bottom:12px">انتهت الفترة التجريبية</p>';
+    html+='<p style="font-size:13px;color:#64748b;margin-bottom:16px">للاستمرار في استخدام هذا الخدمة، يرجى التواصل معنا لتفعيل الاشتراك</p>';
+  } else {
+    html+='<p style="color:#f59e0b;font-weight:700;margin-bottom:12px">'+info.label+'</p>';
+    html+='<p style="font-size:13px;color:#64748b;margin-bottom:16px">هذه الخدمة تتطلب اشتراكاً نشطاً</p>';
+  }
+  html+='<a href="'+wa+'" target="_blank" class="btn" style="display:inline-block;padding:10px 24px;background:#25d366;color:#fff;border-radius:8px;text-decoration:none;font-weight:700;font-size:14px">تواصل عبر واتساب</a>';
+  html+='<br><button class="btn btn-sm" style="margin-top:12px" onclick="this.closest(\'.auth-card\').parentElement.remove()">إغلاق</button>';
+  html+='</div>';
+  const overlay=document.createElement('div');
+  overlay.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.innerHTML=html;
+  overlay.addEventListener('click',function(e){ if(e.target===overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+}
+
+function gateAccess(serviceName){
+  if(!appUserProfile) return true;
+  if(canAccess(serviceName)) return true;
+  showSubscriptionWall(serviceName);
+  return false;
+}
+
+window.addEventListener('auth:login',function(e){
+  appUserProfile=e.detail.profile;
+  const info=getAccessInfo(appUserProfile);
+  const badge=document.getElementById('userBadgeStatus');
+  if(badge){
+    badge.textContent=info.label;
+    badge.style.color=info.color;
+    badge.style.background=info.color+'18';
+  }
+  if(!canAccess('cutting')){
+    showSubscriptionWall('cutting');
+  }
+});
+
+window.addEventListener('auth:logout',function(){
+  appUserProfile=null;
+});

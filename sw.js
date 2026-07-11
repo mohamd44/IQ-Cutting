@@ -1,5 +1,5 @@
-/* IQ Panel Service Worker — يخزّن التطبيق ليعمل دون إنترنت */
-const CACHE = 'iqpanel-v3';
+/* IQ Cutting Service Worker — يخزّن التطبيق ليعمل دون إنترنت */
+const CACHE = 'iqcutting-v4';
 const ASSETS = [
   './index.html', './styles.css', './app.js',
   './firebase-config.js', './auth.js', './firestore-db.js',
@@ -7,11 +7,19 @@ const ASSETS = [
   './logo.jpeg', './icon-192.png', './icon-512.png',
   './manifest.json', './jspdf.umd.min.js', './html2canvas.min.js'
 ];
+const CDN = [
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
+];
 self.addEventListener('install', (e) => {
   e.waitUntil(
     caches.open(CACHE).then(async (c) => {
       for (const url of ASSETS) {
-        try { await c.add(url); } catch(_) { /* تجاهل الملفات غير المتوفرة */ }
+        try { await c.add(url); } catch(_) {}
+      }
+      for (const url of CDN) {
+        try { await c.add(url); } catch(_) {}
       }
     })
   );

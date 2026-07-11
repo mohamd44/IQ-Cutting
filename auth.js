@@ -260,13 +260,20 @@ function showAppForUser(user, profile) {
   if (badgeName) badgeName.textContent = profile.displayName || user.email || user.phoneNumber || 'مستخدم';
 
   if (badgeStatus) {
-    var statusMap = {
-      trial: 'تجربة مجانية',
-      subscribed: 'اشتراك نشط',
-      free_service: 'خدمة مجانية',
-      expired: 'منتهي الصلاحية'
-    };
-    badgeStatus.textContent = statusMap[profile.subscriptionStatus] || profile.subscriptionStatus;
+    if (typeof getAccessInfo === 'function') {
+      var info = getAccessInfo(profile);
+      badgeStatus.textContent = info.label;
+      badgeStatus.style.color = info.color;
+      badgeStatus.style.background = info.color + '18';
+    } else {
+      var statusMap = {
+        trial: 'تجربة مجانية',
+        subscribed: 'اشتراك نشط',
+        free_service: 'خدمة مجانية',
+        expired: 'منتهي الصلاحية'
+      };
+      badgeStatus.textContent = statusMap[profile.subscriptionStatus] || profile.subscriptionStatus;
+    }
   }
 
   window.dispatchEvent(new CustomEvent('auth:login', { detail: { user: user, profile: profile } }));
