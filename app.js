@@ -9,8 +9,7 @@ const palette = ['#dbe7f5','#fde9d2','#d8f0e0','#f5d8e6','#e7dcf5','#fdf0c8',
 
 /* ---------------- الحالة (State) ---------------- */
 let bandTypes = [
-  { id: 'b1', name: 'PVC 0.4 مم', price: 0.30 },
-  { id: 'b2', name: 'PVC 2 مم',   price: 0.80 },
+  { id: 'b1', name: 'PVC', price: 0.50 },
   { id: 'b0', name: 'بدون تلبيس', price: 0.00 },
 ];
 let pieces = [];
@@ -20,7 +19,7 @@ function applyExtraToggleUI(){
   btn.classList.toggle('on', showExtra);
   btn.textContent = showExtra ? '⚙ إخفاء الخيارات الإضافية' : '⚙ خيارات إضافية';
 }
-let sheetTypes = [ { id:'s1', name:'خامة', l:null, w:null, qty:null, price:null, grain:false } ];
+let sheetTypes = [ { id:'s1', name:'', l:null, w:null, qty:null, price:null, grain:false } ];
 let activeSheetIds = ['s1'];
 let layout = null;
 let settings = null;
@@ -129,7 +128,7 @@ function renderSheetTable(){
   sheetTypes.forEach(s=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td><input value="${escapeHtml(s.name)}" data-id="${s.id}" data-f="name" class="sheet-compact-input" style="min-width:44px"></td>
+      <td><input value="${escapeHtml(s.name)}" data-id="${s.id}" data-f="name" class="sheet-compact-input" placeholder="اسم" style="min-width:44px"></td>
       <td><input type="number" min="1" value="${val(s.l)}" data-id="${s.id}" data-f="l" class="sheet-compact-input"></td>
       <td><input type="number" min="1" value="${val(s.w)}" data-id="${s.id}" data-f="w" class="sheet-compact-input"></td>
       <td><input type="number" min="1" value="${val(s.qty)}" data-id="${s.id}" data-f="qty" class="sheet-compact-input"></td>
@@ -1103,8 +1102,8 @@ function resetProject(){
   if(!confirm('بدء مشروع جديد سيحذف كل البيانات الحالية (الاسم، الخامات، القطع، الإعدادات والمخطط). هل تريد المتابعة؟')) return;
   try{ localStorage.removeItem(LS_KEY); }catch(_){}
   pieces=Array.from({length:10},()=>emptyPiece());
-  sheetTypes=[{id:'s1',name:'خامة',l:null,w:null,qty:null,price:null,grain:false}];
-  bandTypes=[{id:'b1',name:'PVC 0.4 مم',price:0.30},{id:'b2',name:'PVC 2 مم',price:0.80},{id:'b0',name:'بدون تلبيس',price:0.00}];
+  sheetTypes=[{id:'s1',name:'',l:null,w:null,qty:null,price:null,grain:false}];
+  bandTypes=[{id:'b1',name:'PVC',price:0.50},{id:'b0',name:'بدون تلبيس',price:0.00}];
   activeSheetIds=['s1'];
   layout=null; settings=null;
   projectImage=null;
