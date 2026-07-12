@@ -219,71 +219,17 @@
         <div id="sheetsArea" class="sheets-area"></div>
         <p id="dragHint" class="hint hidden"></p>
         <!-- شريط الإجراءات السفلي -->
-        <div id="resultsActions" class="results-actions">
-          <span class="band-legend"><i class="band-swatch"></i> حرف التلبيس (التقشيط)</span>
+          <div id="resultsActions" class="results-actions">
           <div class="results-actions-btns">
             <button id="btnOptimize" class="btn btn-primary btn-lg">⚙️ توليد المخطط</button>
-            <button id="btnPdf" class="btn btn-ghost btn-lg">📄 حفظ المشروع PDF</button>
           </div>
         </div>
       </section>
     </main>
 
-    <!-- حاوية تقرير الـ PDF (مخفية) -->
-    <div id="pdfReport" class="pdf-report"></div>
-
-    <!-- نافذة خيارات الحفظ قبل إنشاء PDF -->
-    <div id="pdfOptModal" class="pdf-modal hidden">
-      <div class="pdf-modal-box pdf-opt-box">
-        <div class="pdf-modal-head">
-          <span class="pdf-modal-title">📄 خيارات حفظ المشروع PDF</span>
-          <button id="pdfOptCancel" class="btn btn-danger" type="button">✕</button>
-        </div>
-        <div class="pdf-opt-body">
-          <label class="block">اسم الملف / المشروع
-            <input type="text" id="pdfName" placeholder="مثال: مطبخ منزل العميل أحمد">
-          </label>
-          <div class="pdf-opt-h">البيانات المُضمّنة في التقرير</div>
-          <label class="chk"><input type="checkbox" id="optSummary" checked> صفحة الملخص الشامل للمشروع</label>
-          <label class="chk"><input type="checkbox" id="optSheetData" checked> بيانات كل لوح (قطع · قصّات · استفادة · هدر · تلبيس)</label>
-          <label class="chk"><input type="checkbox" id="optCutOrder" checked> ترتيب عمليات القص لكل لوح</label>
-          <label class="chk"><input type="checkbox" id="optBanding" checked> تفصيل التلبيس حسب النوع</label>
-          <label class="chk"><input type="checkbox" id="optCosts" checked> التكاليف والأسعار</label>
-          <p class="hint">📍 مكان الحفظ: يُحفظ الملف بالاسم أعلاه، ويسألك المتصفح/الجهاز عن مجلد الحفظ عند التنزيل (أو يضعه في مجلد «التنزيلات»).</p>
-        </div>
-        <div class="pdf-modal-actions pdf-opt-actions">
-          <button id="pdfOptGo" class="btn btn-primary btn-lg" type="button">📄 إنشاء وحفظ PDF</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- نافذة عرض/حفظ ملف PDF -->
-    <div id="pdfModal" class="pdf-modal hidden">
-      <div class="pdf-modal-box">
-        <div class="pdf-modal-head">
-          <span class="pdf-modal-title">📄 ملف PDF جاهز — IQ Cutting</span>
-          <div class="pdf-modal-actions">
-            <a id="pdfDownload" class="btn btn-primary" download>⬇️ تنزيل</a>
-            <a id="pdfOpen" class="btn" target="_blank" rel="noopener">↗️ فتح في تبويب</a>
-            <button id="pdfPrint" class="btn" type="button">🖨️ طباعة / حفظ</button>
-            <button id="pdfClose" class="btn btn-danger" type="button">✕ إغلاق</button>
-          </div>
-        </div>
-        <iframe id="pdfFrame" class="pdf-frame" title="معاينة PDF"></iframe>
-        <p class="pdf-modal-hint">إن لم يبدأ التنزيل تلقائياً: استخدم زر «تنزيل» بالأعلى، أو زر التنزيل داخل عارض الـ PDF، أو «طباعة / حفظ» ثم اختر «حفظ كـ PDF» (يعمل على الجوال والكمبيوتر).</p>
-      </div>
-    </div>
   </div><!-- نهاية appContent -->
 
   <!-- ==================== نوافذ عامة (خارج appContent) ==================== -->
-  <div id="pdfProgress" class="pdf-progress-overlay hidden">
-    <div class="pdf-progress-card">
-      <div class="pdf-progress-icon">📄</div>
-      <h3 id="pdfProgressTitle">جارٍ إنشاء ملف PDF…</h3>
-      <div class="pdf-progress-bar-wrap"><div id="pdfProgressBar" class="pdf-progress-bar"></div></div>
-      <p id="pdfProgressText" class="pdf-progress-text">تهيئة المكتبات…</p>
-    </div>
-  </div>
   <div id="toast" class="toast hidden"></div>
   <button id="btnInstall" class="install-fab hidden">⬇️ تثبيت التطبيق على الهاتف</button>
 
