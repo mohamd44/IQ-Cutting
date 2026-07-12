@@ -704,7 +704,8 @@ let drag=null;
 function startDrag(e){
   if(e.button&&e.button!==0) return;
   const el=e.currentTarget;
-  const canvas=el.parentElement;
+  const canvas=el.closest('.sheet-canvas');
+  if(!canvas) return;
   const r=el.getBoundingClientRect();
   const mi=+canvas.dataset.materialIdx, si=+canvas.dataset.sheetIdx, pi=+el.dataset.pi;
   drag={el,canvas,fromMaterialIdx:mi,fromSheetIdx:si,fromPieceIdx:pi,
@@ -712,10 +713,9 @@ function startDrag(e){
     offX:e.clientX-r.left,offY:e.clientY-r.top,w:r.width,h:r.height,
     startX:e.clientX,startY:e.clientY,lastX:e.clientX,lastY:e.clientY,
     lifted:false,pointerId:e.pointerId};
-  try{el.setPointerCapture(e.pointerId);}catch(_){}
   el.classList.add('armed');
   drag.timer=setTimeout(lift,HOLD_MS);
-  document.addEventListener('pointermove',onDrag);
+  document.addEventListener('pointermove',onDrag,{passive:false});
   document.addEventListener('pointerup',endDrag);
   document.addEventListener('pointercancel',cancelDrag);
 }
@@ -724,6 +724,7 @@ function lift(){
   if(!drag) return;
   drag.lifted=true;
   const el=drag.el;
+  try{el.releasePointerCapture(drag.pointerId);}catch(_){}
   el.classList.remove('armed');el.classList.add('lifting');
   if(navigator.vibrate)try{navigator.vibrate(25);}catch(_){}
   el.style.position='fixed';el.style.margin='0';
@@ -757,8 +758,9 @@ function onDrag(e){
 function cancelDrag(){
   if(!drag) return;
   clearTimeout(drag.timer);
+  try{drag.el.releasePointerCapture(drag.pointerId);}catch(_){}
   drag.el.classList.remove('armed','lifting');
-  drag.el.style.position='';drag.el.style.pointerEvents='';drag.el.style.width='';drag.el.style.height='';
+  drag.el.style.position='';drag.el.style.left='';drag.el.style.top='';drag.el.style.pointerEvents='';drag.el.style.width='';drag.el.style.height='';
   document.removeEventListener('pointermove',onDrag);
   document.removeEventListener('pointerup',endDrag);
   document.removeEventListener('pointercancel',cancelDrag);
@@ -867,7 +869,7 @@ function endDrag(e){
       }
     }
   }
-  el.classList.remove('lifting');el.style.position='';el.style.pointerEvents='';el.style.width='';el.style.height='';
+  el.classList.remove('lifting');el.style.position='';el.style.left='';el.style.top='';el.style.pointerEvents='';el.style.width='';el.style.height='';
   drag=null;
   refreshLive();
 }
