@@ -712,6 +712,7 @@ function ptrOff(el,ev,fn){ el.removeEventListener(ev,fn); }
 
 /* ===== 1. بدء السحب ===== */
 function startDrag(e){
+  if(drag) return;
   if(e.button&&e.button!==0) return;
   const el=e.currentTarget;
   const canvas=el.closest('.sheet-canvas');
@@ -743,8 +744,11 @@ function lift(){
   if(navigator.vibrate)try{navigator.vibrate(25);}catch(_){}
   drag.parentEl=el.parentNode;
   document.body.appendChild(el);
-  document.documentElement.style.overflow='hidden';
-  document.documentElement.style.touchAction='none';
+  drag.savedScrollY=window.scrollY;
+  drag.savedBodyCSSText=document.body.style.cssText;
+  drag.savedHTMLCSSText=document.documentElement.style.cssText;
+  document.body.style.cssText='position:fixed;top:-'+window.scrollY+'px;left:0;right:0;bottom:0;overflow:hidden;touch-action:none;';
+  document.documentElement.style.cssText='overflow:hidden;touch-action:none;';
   el.style.position='fixed';el.style.margin='0';
   el.style.width=drag.w+'px';el.style.height=drag.h+'px';
   moveFixed(drag.lastX,drag.lastY);
@@ -778,13 +782,13 @@ function onDrag(e){
 /* ===== 4b. أثناء السحب — Touch Events (Mobile) ===== */
 function onTouchDrag(e){
   if(!drag) return;
+  e.preventDefault();
   const pt=pointerXY(e);
   drag.lastX=pt.x;drag.lastY=pt.y;
   if(!drag.lifted){
     if(Math.hypot(pt.x-drag.startX,pt.y-drag.startY)>MOVE_TOL) cancelDrag();
     return;
   }
-  e.preventDefault();
   moveFixed(pt.x,pt.y);
   highlightTarget(pt.x,pt.y);
 }
@@ -793,8 +797,9 @@ function onTouchDrag(e){
 function cancelDrag(){
   if(!drag) return;
   clearTimeout(drag.timer);
-  document.documentElement.style.overflow='';
-  document.documentElement.style.touchAction='';
+  document.body.style.cssText=drag.savedBodyCSSText||'';
+  document.documentElement.style.cssText=drag.savedHTMLCSSText||'';
+  if(drag.savedScrollY!=null) window.scrollTo(0,drag.savedScrollY);
   const el=drag.el;
   el.classList.remove('armed','lifting');
   el.style.cssText='';
@@ -900,8 +905,9 @@ function _dropPiece(){
 function endDrag(e){
   if(!drag) return;
   clearTimeout(drag.timer);
-  document.documentElement.style.overflow='';
-  document.documentElement.style.touchAction='';
+  document.body.style.cssText=drag.savedBodyCSSText||'';
+  document.documentElement.style.cssText=drag.savedHTMLCSSText||'';
+  if(drag.savedScrollY!=null) window.scrollTo(0,drag.savedScrollY);
   ptrOff(document,'pointermove',onDrag);
   ptrOff(document,'pointerup',endDrag);
   ptrOff(document,'pointercancel',cancelDrag);
