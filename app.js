@@ -708,64 +708,59 @@ function renderResults(){
 
 window.addEventListener('resize',()=>{ if(layout) liveCanvases.forEach(c=>{ if(c.isConnected) positionPieces(c,c.clientWidth/c._L); }); });
 
-/* ---------------- السحب والإفلات الاحترافي (ضغط مستمر) ---------------- */
+/* ---------------- السحب والإفلات مع تمرير تلقائي ---------------- */
 const HOLD_MS=200;
 const MOVE_TOL=9;
 let drag=null;
 
-/* --- Auto-scroll during drag --- */
-const SCROLL_ZONE = 100;
-const SCROLL_MAX = 100;
-let _scrollRaf = null;
-let _scrollDir = 0;
-let _lastScrollTime = 0;
+let _autoScrollId=null;
+let _autoScrollSpeed=0;
 
-function _scrollStep(timestamp) {
-  if (!drag || !drag.lifted) { _scrollRaf = null; return; }
-  if (_scrollDir) {
-    const now = performance.now();
-    const dt = _lastScrollTime ? (now - _lastScrollTime) / 16.67 : 1;
-    _lastScrollTime = now;
-    const step = _scrollDir * Math.min(dt, 3);
-    window.scrollBy(0, step);
-    moveFixed(drag.lastX, drag.lastY + step);
-    highlightTarget(drag.lastX, drag.lastY + step);
+function _autoScrollTick(){
+  if(!drag||!drag.lifted){ _stopAutoScroll(); return; }
+  if(_autoScrollSpeed){
+    window.scrollBy(0, _autoScrollSpeed);
+    drag.lastY+=_autoScrollSpeed;
+    moveFixed(drag.lastX, drag.lastY);
+    highlightTarget(drag.lastX, drag.lastY);
   }
-  _scrollRaf = requestAnimationFrame(_scrollStep);
+  _autoScrollId=requestAnimationFrame(_autoScrollTick);
 }
 
-function _updateAutoScroll(y) {
-  const vh = window.innerHeight;
-  if (y < SCROLL_ZONE) {
-    _scrollDir = -SCROLL_MAX * ((SCROLL_ZONE - y) / SCROLL_ZONE);
-  } else if (y > vh - SCROLL_ZONE) {
-    _scrollDir = SCROLL_MAX * ((y - (vh - SCROLL_ZONE)) / SCROLL_ZONE);
+function _startAutoScroll(clientY){
+  const vh=window.innerHeight;
+  const edge=100;
+  if(clientY<edge){
+    _autoScrollSpeed=-Math.round(10+(1-clientY/edge)*90);
+  } else if(clientY>vh-edge){
+    _autoScrollSpeed=Math.round(10+((clientY-(vh-edge))/edge)*90);
   } else {
-    _scrollDir = 0;
-    _lastScrollTime = 0;
+    _autoScrollSpeed=0;
   }
-  if (_scrollDir && !_scrollRaf) { _lastScrollTime = 0; _scrollRaf = requestAnimationFrame(_scrollStep); }
+  if(_autoScrollSpeed&&!_autoScrollId){
+    _autoScrollId=requestAnimationFrame(_autoScrollTick);
+  }
 }
 
-function _stopAutoScroll() {
-  _scrollDir = 0; _lastScrollTime = 0;
-  if (_scrollRaf) { cancelAnimationFrame(_scrollRaf); _scrollRaf = null; }
+function _stopAutoScroll(){
+  _autoScrollSpeed=0;
+  if(_autoScrollId){ cancelAnimationFrame(_autoScrollId); _autoScrollId=null; }
 }
 
 function startDrag(e){
-  if(e.button && e.button!==0) return;
+  if(e.button&&e.button!==0) return;
   const el=e.currentTarget;
   const canvas=el.parentElement;
   const r=el.getBoundingClientRect();
   const mi=+canvas.dataset.materialIdx, si=+canvas.dataset.sheetIdx, pi=+el.dataset.pi;
-  drag={ el, canvas, fromMaterialIdx:mi, fromSheetIdx:si, fromPieceIdx:pi,
-         piece:layout[mi].sheets[si].pieces[pi],
-         offX:e.clientX-r.left, offY:e.clientY-r.top, w:r.width, h:r.height,
-         startX:e.clientX, startY:e.clientY, lastX:e.clientX, lastY:e.clientY,
-         lifted:false, pointerId:e.pointerId };
-  try{ el.setPointerCapture(e.pointerId); }catch(_){}
+  drag={el,canvas,fromMaterialIdx:mi,fromSheetIdx:si,fromPieceIdx:pi,
+    piece:layout[mi].sheets[si].pieces[pi],
+    offX:e.clientX-r.left,offY:e.clientY-r.top,w:r.width,h:r.height,
+    startX:e.clientX,startY:e.clientY,lastX:e.clientX,lastY:e.clientY,
+    lifted:false,pointerId:e.pointerId};
+  try{el.setPointerCapture(e.pointerId);}catch(_){}
   el.classList.add('armed');
-  drag.timer=setTimeout(lift, HOLD_MS);
+  drag.timer=setTimeout(lift,HOLD_MS);
   document.addEventListener('pointermove',onDrag);
   document.addEventListener('pointerup',endDrag);
   document.addEventListener('pointercancel',cancelDrag);
@@ -775,35 +770,35 @@ function lift(){
   if(!drag) return;
   drag.lifted=true;
   const el=drag.el;
-  el.classList.remove('armed'); el.classList.add('lifting');
-  if(navigator.vibrate) try{ navigator.vibrate(25); }catch(_){}
-  el.style.position='fixed'; el.style.margin='0';
-  el.style.width=drag.w+'px'; el.style.height=drag.h+'px';
+  el.classList.remove('armed');el.classList.add('lifting');
+  if(navigator.vibrate)try{navigator.vibrate(25);}catch(_){}
+  el.style.position='fixed';el.style.margin='0';
+  el.style.width=drag.w+'px';el.style.height=drag.h+'px';
   moveFixed(drag.lastX,drag.lastY);
   highlightTarget(drag.lastX,drag.lastY);
 }
 
-function moveFixed(x,y){ drag.el.style.left=(x-drag.offX)+'px'; drag.el.style.top=(y-drag.offY)+'px'; }
+function moveFixed(x,y){drag.el.style.left=(x-drag.offX)+'px';drag.el.style.top=(y-drag.offY)+'px';}
 
 function highlightTarget(x,y){
   drag.el.style.pointerEvents='none';
   const t=document.elementFromPoint(x,y);
   drag.el.style.pointerEvents='';
   const tc=t?(t.closest('.sheet-canvas')||(t.closest('.sheet-block')?t.closest('.sheet-block').querySelector('.sheet-canvas'):null)):null;
-  liveCanvases.forEach(c=>c.classList.toggle('drop-target', c===tc));
+  liveCanvases.forEach(c=>c.classList.toggle('drop-target',c===tc));
 }
 
 function onDrag(e){
   if(!drag) return;
-  drag.lastX=e.clientX; drag.lastY=e.clientY;
+  drag.lastX=e.clientX;drag.lastY=e.clientY;
   if(!drag.lifted){
-    if(Math.hypot(e.clientX-drag.startX, e.clientY-drag.startY)>MOVE_TOL) cancelDrag();
+    if(Math.hypot(e.clientX-drag.startX,e.clientY-drag.startY)>MOVE_TOL) cancelDrag();
     return;
   }
   e.preventDefault();
   moveFixed(e.clientX,e.clientY);
   highlightTarget(e.clientX,e.clientY);
-  _updateAutoScroll(e.clientY);
+  _startAutoScroll(e.clientY);
 }
 
 function cancelDrag(){
@@ -811,7 +806,7 @@ function cancelDrag(){
   clearTimeout(drag.timer);
   _stopAutoScroll();
   drag.el.classList.remove('armed','lifting');
-  drag.el.style.position=''; drag.el.style.pointerEvents=''; drag.el.style.width=''; drag.el.style.height='';
+  drag.el.style.position='';drag.el.style.pointerEvents='';drag.el.style.width='';drag.el.style.height='';
   document.removeEventListener('pointermove',onDrag);
   document.removeEventListener('pointerup',endDrag);
   document.removeEventListener('pointercancel',cancelDrag);
@@ -838,7 +833,7 @@ function findFreeSpot(mi,si,piece,wx,wy,exceptIdx){
     for(let gx=0;gx<=maxX+0.001;gx+=step){
       if(!overlapsAny(mi,si,piece,gx,gy,exceptIdx)){
         const d=(gx-wx)*(gx-wx)+(gy-wy)*(gy-wy);
-        if(d<bestD){ bestD=d; best={x:gx,y:gy}; }
+        if(d<bestD){bestD=d;best={x:gx,y:gy};}
       }
     }
   }
@@ -866,7 +861,7 @@ function magnetSnap(mi,si,piece,nx,ny,exceptIdx){
     if(c.x<-0.01||c.x>maxX+0.01||c.y<-0.01||c.y>maxY+0.01) continue;
     if(overlapsAny(mi,si,piece,c.x,c.y,exceptIdx)) continue;
     const d=(c.x-nx)*(c.x-nx)+(c.y-ny)*(c.y-ny);
-    if(d<bd){ bd=d; best=c; }
+    if(d<bd){bd=d;best=c;}
   }
   return best;
 }
@@ -880,21 +875,21 @@ function endDrag(e){
   document.removeEventListener('pointercancel',cancelDrag);
   liveCanvases.forEach(c=>c.classList.remove('drop-target'));
 
-  if(!drag.lifted){ drag.el.classList.remove('armed'); drag=null; return; }
+  if(!drag.lifted){drag.el.classList.remove('armed');drag=null;return;}
 
-  drag.lastX=e.clientX; drag.lastY=e.clientY;
-  const el=drag.el, piece=drag.piece;
+  drag.lastX=e.clientX;drag.lastY=e.clientY;
+  const el=drag.el,piece=drag.piece;
   el.style.pointerEvents='none';
   const target=document.elementFromPoint(drag.lastX,drag.lastY);
   el.style.pointerEvents='';
   const tCanvas=target?(target.closest('.sheet-canvas')||(target.closest('.sheet-block')?target.closest('.sheet-block').querySelector('.sheet-canvas'):null)):null;
 
   if(tCanvas){
-    const toMi=+tCanvas.dataset.materialIdx, toSi=+tCanvas.dataset.sheetIdx;
+    const toMi=+tCanvas.dataset.materialIdx,toSi=+tCanvas.dataset.sheetIdx;
     if(toMi!==drag.fromMaterialIdx){
       toast('⚠️ لا يمكن نقل القطعة إلى خامة مختلفة');
     } else {
-      const matL=layout[toMi].L, matW=layout[toMi].W;
+      const matL=layout[toMi].L,matW=layout[toMi].W;
       if(piece.l>matL+0.01||piece.w>matW+0.01){
         toast('⚠️ القطعة أكبر من اللوح — رُفض الإفلات');
       } else {
@@ -910,7 +905,7 @@ function endDrag(e){
         if(!pos){
           toast('⚠️ لا يوجد مكان كافٍ في هذا اللوح');
         } else {
-          piece.x=Math.round(pos.x*10)/10; piece.y=Math.round(pos.y*10)/10;
+          piece.x=Math.round(pos.x*10)/10;piece.y=Math.round(pos.y*10)/10;
           if(toSi!==drag.fromSheetIdx){
             layout[drag.fromMaterialIdx].sheets[drag.fromSheetIdx].pieces.splice(drag.fromPieceIdx,1);
             layout[toMi].sheets[toSi].pieces.push(piece);
@@ -921,7 +916,7 @@ function endDrag(e){
       }
     }
   }
-  el.classList.remove('lifting'); el.style.position=''; el.style.pointerEvents=''; el.style.width=''; el.style.height='';
+  el.classList.remove('lifting');el.style.position='';el.style.pointerEvents='';el.style.width='';el.style.height='';
   drag=null;
   refreshLive();
 }
